@@ -399,7 +399,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 		};
 
 		module.parseXml = function(xml, successFn) {
-			parseBpmnJson(convertXml(result));
+			parseBpmnJson(convertXml(xml));
 			successFn();
 		};
 
