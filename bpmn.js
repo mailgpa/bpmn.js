@@ -13,6 +13,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 		var prefixMap = {};
 
 		var elementMap = {};
+		var diagramElement = "diagram";
 		
 		function parseXml(xml) {
 			var dom = null;
@@ -171,7 +172,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 		function parseDefinitions(definitions) {
 			parseNamespaces(definitions);
 
-			paper = Joint.paper("diagram", 1500, 800);
+			paper = Joint.paper(diagramElement, 1500, 800);
 			console.log("parsing definitions:" + definitions["@id"]);
 
 			if (definitions[tag("BPMNDiagram", "BPMNDI")]) {
@@ -403,7 +404,13 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 			successFn();
 		};
 
-		module.parse = function(modelUrl, successFn) {
+		module.parse = function(modelUrl, successFn, options) {
+			if (options) {
+				if(options.diagramElement) {
+					diagramElement = options.diagramElement;
+				}
+			}
+			
 			xhr.get({
 				// The URL to request
 				url: modelUrl,
@@ -428,7 +435,12 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 					console.log("can't highlight id:"+id+" , element does not exist");
 				}
 			});
-		}
+		};
+		
+		module.reset = function () {
+			Joint.resetPaper();
+		};
+		
 		global.bpmn = module;
 		return module;
 	})(this, Joint.dia.bpmn);

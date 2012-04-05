@@ -173,6 +173,7 @@ var p1 = Joint.dia.bpmn.Task.create({
 bpmn.Task = Element.extend({
      object: "Task",
      module: "bpmn",
+     draggable: false,
      init: function(properties){
 	 // options
 	 var p = Joint.DeepSupplement(this.properties, properties, {

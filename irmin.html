@@ -22,9 +22,9 @@
 			require(["dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/ContentPane", "dojo/parser"]);
 		
 			require(["bpmn", "dojo/domReady!"], function(bpmn) {
-			    bpmn.parse("test/collaboration.bpmn", function() {
+			    bpmn.parse("test/VacationRequest.bpmn20.xml", function() {
 				    bpmn.highlight(["ServiceTask_1"], {"color" : "red"});
-			    });
+			    }, {diagramElement: "diagram"});
 			});
 		</script>
 	</head>
