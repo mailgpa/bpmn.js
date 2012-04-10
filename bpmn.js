@@ -1,10 +1,6 @@
-define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/array", "dojo/query", "dojo/domReady!"], function(d, xhr, path, array, query) {
+define( "bpmn", ["bpmn/renderer", "dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/array", "dojo/query", "dojo/domReady!"], function(renderer, dom, xhr, path, array, query) {
 
-	String.prototype.endsWith = function(suffix) {
-		return this.indexOf(suffix, this.length - suffix.length) !== -1;
-	};
-
-	return (function(global, dia) {
+	return (function(global) {
 		var module = {};
 		var bpmndi = undefined;
 		var paper = undefined;
@@ -14,6 +10,18 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 
 		var elementMap = {};
 		var diagramElement = "diagram";
+
+		module.clickFn = undefined;
+		
+		function clickFunction (element){
+			if  (module.clickFn){
+				return function(){
+					module.clickFn(element);
+				};
+			}
+			return function () {
+			};
+		};
 		
 		function parseXml(xml) {
 			var dom = null;
@@ -92,18 +100,9 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 			var result = [];
 
 			array.forEach(waypoints, function(waypoint, index) {
-				// first and last waypoint are the joint start and element -> the shapes
-				if (index == 0) {
-					return;
-				}
-
 				var xpos = new Number(waypoint["@x"]).toFixed(0);
 				var ypos = new Number(waypoint["@y"]).toFixed(0);
-
-				if (index == waypoints.length - 1) {
-					return;
-				}
-				result.push("" + xpos + " " + ypos);
+				result.push({x: xpos, y:ypos});
 			});
 
 			return result;
@@ -171,8 +170,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 
 		function parseDefinitions(definitions) {
 			parseNamespaces(definitions);
-
-			paper = Joint.paper(diagramElement, 1500, 800);
+			paper = renderer.init(diagramElement, 1500, 800);
 			console.log("parsing definitions:" + definitions["@id"]);
 
 			if (definitions[tag("BPMNDiagram", "BPMNDI")]) {
@@ -259,7 +257,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 		function createParticipant(participant) {
 			var bounds = getBounds(participant["@id"]);
 			console.log("participant bounds", bounds);
-			var participantElem = dia.Participant.create({
+			var props = {
 				rect: {
 					x: bounds.x,
 					y: bounds.y,
@@ -267,7 +265,8 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 					height: bounds.h
 				},
 				label: participant["@name"]
-			});
+			};
+			var participantElem = renderer.renderParticipant(props);
 			elementMap[participant["@id"]] = participantElem;
 		}
 
@@ -279,15 +278,15 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 			if (collaboration[tag("messageFlow")] instanceof Array) {
 				array.forEach(collaboration[tag("messageFlow")], function(messageFlow, index) {
 					console.log("processing messageflow", messageFlow);
-					parseFlow(messageFlow, dia.message);
+					parseFlow(messageFlow, "message");
 				});
 			} else {
 				var flow = collaboration[tag("messageFlow")];
-				parseFlow(flow, dia.message);
+				parseFlow(flow, "message");
 			}
 		}
 
-		function parseFlow(flow, jointType) {
+		function parseFlow(flow, flowType) {
 			console.log("FLOW", flow);
 			if (!elementMap[flow["@sourceRef"]]) {
 				console.log("source element not found for sequence flow:" + flow["@sourceRef"]);
@@ -299,9 +298,8 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 			}
 			var source = elementMap[flow["@sourceRef"]];
 			var target = elementMap[flow["@targetRef"]];
-			var joint = source.joint(target, jointType);
-			joint.setVertices(getWaypoints(flow["@id"]));
-			joint.registerForever([source, target]);
+			
+			renderer.renderFlow(source, target, getWaypoints(flow["@id"]), flowType, flow);
 		}
 
 		function parseEvent(event, eventType) {
@@ -318,7 +316,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 			var bounds = getBounds(event["@id"]);
 			var defs = getEventDefinitions(event);
 			console.log("event definitions:", defs);
-			var eventElem = dia.Event.create({
+			var props = {
 				position: {
 					x: bounds.x,
 					y: bounds.y
@@ -327,8 +325,11 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 				label: event["@name"],
 				type: eventType,
 				definitions: defs
-			});
+			};
+			
+			var eventElem = renderer.renderEvent(props);
 			elementMap[event["@id"]] = eventElem;
+			eventElem.mousedown(clickFunction(event));
 		}
 
 		function parseTask(task, taskType) {
@@ -343,7 +344,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 
 		function createTask(task, taskType) {
 			var bounds = getBounds(task["@id"]);
-			var taskElem = dia.Task.create({
+			var props = {
 				rect: {
 					x: bounds.x,
 					y: bounds.y,
@@ -352,8 +353,11 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 				},
 				label: task["@name"],
 				type: taskType
-			});
+			};
+
+			var taskElem = renderer.renderTask(props);
 			elementMap[task["@id"]] = taskElem;
+			taskElem.mousedown(clickFunction(task));
 		};
 
 		function parseGateway(gateway, gatewayType) {
@@ -368,7 +372,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 
 		function createGateway(gateway, gatewayType) {
 			var bounds = getBounds(gateway["@id"]);
-			var gatewayElem = dia.Gateway.create({
+			var props = {
 				rect: {
 					x: bounds.x,
 					y: bounds.y,
@@ -377,13 +381,14 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 				},
 				label: gateway["@name"],
 				type: gatewayType
-			});
+			};
+			var gatewayElem = renderer.renderGateway(props);
 			elementMap[gateway["@id"]] = gatewayElem;
 		}
 
 		function parseSequenceFlows(flows) {
 			array.forEach(flows, function(flow, index) {
-				parseFlow(flow, dia.sequence);
+				parseFlow(flow, "sequence");
 			});
 		};
 
@@ -398,19 +403,26 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 			console.log("bpmnJsonObj", jsonObj);
 			return jsonObj;
 		};
+		
+		function init(options) {
+			if (options) {
+				if(options.diagramElement) {
+					diagramElement = options.diagramElement;
+				}
+				if(options.clickFn) {
+					module.clickFn = options.clickFn;
+				}
+			}
+		};
 
-		module.parseXml = function(xml, successFn) {
+		module.parseXml = function(xml, successFn, options) {
+			init(options);
 			parseBpmnJson(convertXml(xml));
 			successFn();
 		};
 
 		module.parse = function(modelUrl, successFn, options) {
-			if (options) {
-				if(options.diagramElement) {
-					diagramElement = options.diagramElement;
-				}
-			}
-			
+			init(options);
 			xhr.get({
 				// The URL to request
 				url: modelUrl,
@@ -430,7 +442,7 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 
 			array.forEach(ids, function(id, index) {
 				if (elementMap[id]) {
-					elementMap[id].wrapper.glow(attrs);
+					elementMap[id].glow(attrs);
 				}else{
 					console.log("can't highlight id:"+id+" , element does not exist");
 				}
@@ -438,10 +450,10 @@ define( "bpmn", ["dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/arr
 		};
 		
 		module.reset = function () {
-			Joint.resetPaper();
+			renderer.clear();
 		};
 		
 		global.bpmn = module;
 		return module;
-	})(this, Joint.dia.bpmn);
+	})(this);
 });
