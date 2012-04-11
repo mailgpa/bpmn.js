@@ -48,23 +48,37 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 		
 		function getShapeDI(bpmnElement) {
 			var result = {};
-			array.forEach(bpmndi[tag("BPMNShape", "BPMNDI")], function(entry, index) {
-				if (entry["@bpmnElement"] && entry["@bpmnElement"] == bpmnElement) {
-					console.log("get shape DI", entry);
-					result = entry;
-				}
-			});
+			
+			if (bpmndi[tag("BPMNShape", "BPMNDI")] instanceof Array) {
+				array.forEach(bpmndi[tag("BPMNShape", "BPMNDI")], function(entry, index) {
+					if (entry["@bpmnElement"] && entry["@bpmnElement"] == bpmnElement) {
+						console.log("get shape DI", entry);
+						result = entry;
+					}
+				});
+			}else {
+				return bpmndi[tag("BPMNShape", "BPMNDI")];
+			}
+			
 			return result;
 		};
 
 		function getEdgeDI(bpmnElement) {
 			var result = {};
-			array.forEach(bpmndi[tag("BPMNEdge", "BPMNDI")], function(entry, index) {
-				if (entry["@bpmnElement"] && entry["@bpmnElement"] == bpmnElement) {
-					console.log("get edge DI", entry);
-					result = entry;
-				}
-			});
+			
+			if (bpmndi[tag("BPMNEdge", "BPMNDI")] instanceof Array) {
+				
+				array.forEach(bpmndi[tag("BPMNEdge", "BPMNDI")], function(entry, index) {
+					if (entry["@bpmnElement"] && entry["@bpmnElement"] == bpmnElement) {
+						console.log("get edge DI", entry);
+						result = entry;
+					}
+				});
+				
+			}else{
+				return bpmndi[tag("BPMNEdge", "BPMNDI")];
+			}
+			
 			return result;
 		};
 
@@ -146,6 +160,10 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 				case "task":
 					parseTask(json[prop], "task");
 					break;
+					
+				case "subProcess":
+					parseTask(json[prop], "subProcess");
+					break;	
 
 				default:
 					handleElement(elementName, json[prop]);
@@ -387,9 +405,14 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 		}
 
 		function parseSequenceFlows(flows) {
-			array.forEach(flows, function(flow, index) {
-				parseFlow(flow, "sequence");
-			});
+			if (flows instanceof Array) {
+				array.forEach(flows, function(flow, index) {
+					parseFlow(flow, "sequence");
+				});
+			}
+			else{ 
+				parseFlow(flows, "sequence");
+			}
 		};
 
 		function convertXml(xml) {
@@ -414,11 +437,17 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 				}
 			}
 		};
+		
+		function next(fn) {
+			if (fn) {
+				fn();
+			}
+		};
 
 		module.parseXml = function(xml, successFn, options) {
 			init(options);
 			parseBpmnJson(convertXml(xml));
-			successFn();
+			next(successFn);
 		};
 
 		module.parse = function(modelUrl, successFn, options) {
@@ -428,7 +457,7 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 				url: modelUrl,
 				load: function(result) {
 					parseBpmnJson(convertXml(result));
-					successFn();
+					next(successFn);
 				}
 			});
 		};
