@@ -25,3 +25,15 @@ require(["bpmn", "dojo/domReady!"], function(bpmn) {
     	});
 });
 ```
+
+Todo
+====
+
+* Flow element containers children
+* Boudnary events and labels should always be on top
+* Activity / Loop Markers
+* Flow labels
+* Movable labels
+* Remaining event definitions
+* Adjust canvas to actual size
+

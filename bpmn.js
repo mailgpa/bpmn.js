@@ -9,8 +9,11 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 		var prefixMap = {};
 
 		var elementMap = {};
+		var tokenMap = {};
+		var highlightMap = {};
 		var diagramElement = "diagram";
 
+		module.definitions = undefined;
 		module.clickFn = undefined;
 		
 		function clickFunction (element){
@@ -198,7 +201,8 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 				console.log("no DI information found, canceling BPMN parsing");
 				return;
 			}
-
+			module.definitions = definitions;
+			
 			var collaboration = definitions[tag("collaboration")];
 
 			if (collaboration) {
@@ -468,18 +472,53 @@ define( "bpmn", ["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "do
 					"color": "red"
 				};
 			}
-
+			
+			module.unhighlight(ids);
+			
 			array.forEach(ids, function(id, index) {
 				if (elementMap[id]) {
-					elementMap[id].glow(attrs);
+					var glowBase = elementMap[id].pop();
+					highlightMap[id] = glowBase.glow(attrs);
+					elementMap[id].push(glowBase);
 				}else{
 					console.log("can't highlight id:"+id+" , element does not exist");
 				}
 			});
 		};
 		
+		module.unhighlight = function(ids, attrs) {
+			if (!ids) {
+				for (var key in highlightMap) {
+					highlightMap[key].remove();
+				}
+			}
+			else{
+				array.forEach(ids, function(id, index) {
+					if ( highlightMap[id] ) {
+						 highlightMap[id].remove();
+						 delete highlightMap[id];
+					}
+				});
+			}
+		};
+		
 		module.reset = function () {
 			renderer.clear();
+		};
+		
+		module.startTokenGame = function () {
+			var firstProcess = module.definitions[tag("process","BPMN")][0];
+			var startEvent = firstProcess[tag("startEvent", "BPMN")];
+			
+			if (startEvent instanceof Array) {
+				array.forEach(startEvent, function (event, index) {
+					tokenMap[event["@id"]] = 1;
+					module.highlight([event["@id"]]);
+				});
+			}else{
+				tokenMap[startEvent["@id"]] = 1;
+				module.highlight([startEvent["@id"]]);			
+			}
 		};
 		
 		global.bpmn = module;

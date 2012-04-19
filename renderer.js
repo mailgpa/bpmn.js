@@ -163,7 +163,9 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 		};
 		
 		module.clear = function() {
-			paper.clear();
+			if (paper) {
+				paper.clear();
+			}
 		};
 		
 		module.renderFlow = function (source, target, waypoints, flowType, flow) {
@@ -236,9 +238,8 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 			if (bpmn.shapeAttrs[props.type]) {
 				rect.attr(bpmn.shapeAttrs[props.type].attrs);
 			}
-		
-			set.push(rect.attr(props.attrs));
-		
+			rect.attr(props.attrs)
+			
 			if (props.label) {
 				var label = paper.text(props.rect.x, props.rect.y, props.label);
 				label.translate(rect.getBBox().width / 2, rect.getBBox().height / 2);
@@ -251,6 +252,8 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 				typePath.translate(props.rect.x + 15, props.rect.y + 10);
 				set.push(typePath);
 			}
+			
+			set.push(rect);
 			return set;
 		};
 		
@@ -269,9 +272,9 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 		     
 		     var xpos = props.position.x+props.radius;
 		     var ypos = props.position.y+props.radius;
+		     
+		     var base = paper.circle(xpos, ypos, props.radius).attr(props.attrs);
 
-			 set.push(paper.circle(xpos, ypos, props.radius).attr(props.attrs));
-		
 			 // label
 			 if (props.label){
 			 	 var label = paper.text(xpos, ypos, props.label);
@@ -300,6 +303,8 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 		     		set.push(symbolPath);
 		     	}
 		     }
+		     
+		     set.push(base);
 		     
 		     return set;
 		};
