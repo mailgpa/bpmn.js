@@ -5,78 +5,31 @@
 		<title>bpmn.js</title>
 		<link rel="stylesheet" href="style.css" media="screen">
 		<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.7.2/dijit/themes/claro/claro.css" media="screen">
+		<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojox/grid/resources/Grid.css" media="screen">
+		<link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojox/grid/resources/claroGrid.css" media="screen">
 		<!-- load dojo and provide config via data attribute -->
-		<script src="https://raw.github.com/DmitryBaranovskiy/raphael/master/raphael.js" type="text/javascript"></script>
-		<script src="http://ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojo/dojo.js" data-dojo-config="async: true, parseOnLoad: true"></script>
-		
-		<script src="renderer.js"></script>
-		<script src="bpmn.js"></script>
-		
+		<script src="lib/raphael.js" type="text/javascript"></script>
+		<script src="//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojo/dojo.js" data-dojo-config="async: true, parseOnLoad: true"></script>
 		<script>
-			// parser and layout deps
-			require(["bpmn","dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/ContentPane", "dojo/parser","dojo/dnd/Source","dojo/dnd/Target","dojo/domReady!"], function(bpmn) {
-				// Check for the various File API support.
-				if (window.File && window.FileReader && window.FileList && window.Blob) {
-					// Great success! All the File APIs are supported.
-				} else {
-					alert('The File APIs are not fully supported in this browser.');
-					return;
-				}
-				
-				function handleFileSelect(evt) {
-				    evt.stopPropagation();
-				    evt.preventDefault();
-	
-				    var files = evt.dataTransfer.files; // FileList object.
-	
-				    // files is a FileList of File objects. List some properties.
-				    for (var i = 0, f; f = files[i]; i++) {
-					  var reader = new FileReader();
-					  reader.onload = function(e) {
-							bpmn.parseXml(e.target.result);
-					  };
-				      reader.onerror = function(loadError) {
-						  console.log("error", loadError)
-						  console.log (loadError.getMessage())
-					  };
-					  reader.readAsText(f);
-				    }
-				};
-	
-				function handleDragOver(evt) {
-				    evt.stopPropagation();
-				    evt.preventDefault();
-				};
-				
-				var dropZone = document.getElementById('drop_zone');
-				dropZone.addEventListener('dragover', handleDragOver, false);
-				dropZone.addEventListener('drop', handleFileSelect, false);
-			});
-		
-			require(["bpmn", "dojo/on", "dojo/domReady!"], function(bpmn,on) {
-			    
-			    bpmn.parse("test/collaboration.bpmn", function() {
-				    bpmn.highlight(["ServiceTask_1"], {"color" : "red"});
-			    }, {
-			    	diagramElement: "diagram", 
-			    	clickFn : function (elem) {
-			    		alert(JSON.stringify(elem));
-			    	}
-			    });
-			});
-			
-			function mouseUp(evt) {
-				console.log("UP",evt);
-			};
-			
+		require({
+				baseUrl: "./",
+				packages: [
+					{ name: "dojo", location: "//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojo" },
+					{ name: "dojox", location: "//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojox" },
+					{ name: "dijit", location: "//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dijit" },
+					{ name: "bpmn", location: "bpmn", main: "core" }
+				]
+		});
 		</script>
+		<script src="bpmn/editor.js"></script>
 	</head>
 	<body class="claro">
 		<div id="appLayout" class="demoLayout" data-dojo-type="dijit.layout.BorderContainer" data-dojo-props="design: 'headline'">
 			<div class="centerPanel" data-dojo-type="dijit.layout.TabContainer" data-dojo-props="region: 'center', tabPosition: 'bottom'">
 				<div data-dojo-type="dijit.layout.ContentPane" title="Process">
 					<div id="drop_zone">Drop BPMN 2.0 XML here</div>
-					<div id="diagramWrapper" dojoType="dojo.dnd.Target" jsId="c5" class="container" onmouseup="mouseUp">
+					<div id="toolPadContainer"></div>
+					<div id="diagramWrapper" class="container"> 
 						<div id="diagram"></div>
 					</div>
 				</div>
@@ -87,11 +40,23 @@
 			
 					<div style="float: left; margin: 5px;">
 						<div dojoType="dojo.dnd.Source" jsId="c4" class="container" copyOnly="true" selfAccept="false" delay="8">
-							<div class="dojoDndItem">Item 1</div>
+							<div class="dojoDndItem" dndtype="startEvent">Start Event</div>
+							<div class="dojoDndItem" dndtype="endEvent">End Event</div>
+							<div class="dojoDndItem" dndtype="serviceTask">Service Task</div>
+							<div class="dojoDndItem" dndtype="userTask">User Task</div>
+							<div class="dojoDndItem" dndtype="exclusiveGateway">Exclusive Gateway</div>
 						</div>
 					</div>
-					
-					<div id="grid"></div>
+			</div>
+			<div id="rightCol" class="edgePanel" data-dojo-type="dijit.layout.ContentPane" style="width:400px" data-dojo-props="region: 'right', splitter: true">
+				<div id="gridDiv" style="height:400px"></div>
+				<span data-dojo-id='addButton' data-dojo-type='dijit.form.Button'>
+				      Add Property
+				  </span>
+				
+				  <span data-dojo-id='removeButton' data-dojo-type='dijit.form.Button'>
+				      Remove Property
+				  </span>
 			</div>
 		</div>
 	</body>

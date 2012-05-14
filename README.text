@@ -29,11 +29,12 @@ require(["bpmn", "dojo/domReady!"], function(bpmn) {
 Todo
 ====
 
+* Namespace prefix check on element value change
+* "Add Connection feature"
 * Flow element containers children
 * Boudnary events and labels should always be on top
 * Activity / Loop Markers
 * Flow labels
 * Movable labels
+* Movable connection waypoints
 * Remaining event definitions
-* Adjust canvas to actual size
-

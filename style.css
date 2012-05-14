@@ -46,7 +46,7 @@ html, body {
 }
 
 .claro .demoLayout .edgePanel {
-    background-color: #d0e9fc;
+    background-color: #fff;
 }
 
 #viewsChart {
@@ -63,4 +63,8 @@ html, body {
   text-align: center;
   font: 20pt bold;
   color: #bbb;
+}
+
+.dojoxGrid table {
+  margin: 0;
 }

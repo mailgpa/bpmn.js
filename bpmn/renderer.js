@@ -1,14 +1,113 @@
-define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], function(dom, xhr, array) {
+define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], function(dom, xhr, array) {
 
 	String.prototype.endsWith = function(suffix) {
 		return this.indexOf(suffix, this.length - suffix.length) !== -1;
 	};
 	
-	Raphael.fn.arrowHead = function (x1, y1, x2, y2, size) {
+	Raphael.fn.arrowHead = function (x1, y1, x2, y2, size, pathOnly) {
 		var angle = Math.atan2(x1-x2,y2-y1);
 		angle = (angle / (2 * Math.PI)) * 360;
-		var arrowPath = this.path("M" + x2 + " " + y2 + " L" + (x2  - size) + " " + (y2  - size) + " L" + (x2  - size)  + " " + (y2  + size) + " L" + x2 + " " + y2 ).attr("fill","black").rotate((90+angle),x2,y2);
+		var pathString = "M" + x2 + " " + y2 + " L" + (x2  - size -5) + " " + (y2  - size) + " L" + (x2  - size -5)  + " " + (y2  + size) + " L" + x2 + " " + y2+"Z";
+		if (pathOnly) {
+			return pathString;
+		}
+		var arrowPath = this.path(pathString).attr("fill","black").rotate((90+angle),x2,y2);
 		return arrowPath;
+	};
+	
+	
+	Raphael.fn.connection = function (source, target, points, incoming) {
+		var original = undefined;
+		var sourceAnchor = undefined;
+		var targetAnchor = undefined;
+		
+		if (source && source.source && source.target) {
+        	var dx = target;
+        	var dy = points;
+        	
+        	original = source;
+        	points = original.points;
+        	target = original.target;
+        	source = original.source;
+        	sourceAnchor = original.sourceAnchor;
+        	targetAnchor = original.targetAnchor;
+        	
+        	if (incoming == true) {
+        		targetAnchor.x += dx;
+				targetAnchor.y += dy;
+				points[points.length -1].x = targetAnchor.x;
+				points[points.length -1].y = targetAnchor.y;
+				targetAnchor.set.transform("...T"+dx+","+dy);
+        	}else{
+				sourceAnchor.x += dx;
+				sourceAnchor.y += dy;
+				points[0].x = sourceAnchor.x;
+				points[0].y = sourceAnchor.y;
+				sourceAnchor.set.transform("...T"+dx+","+dy);
+			}
+			
+    	}else {
+    		sourceAnchor = { x : new Number(points[0].x), y: new Number(points[0].y) , set: this.set() };
+			targetAnchor = { x : new Number(points[points.length -1].x), y: new Number(points[points.length -1].y) , set: this.set() };
+    	}
+		
+		
+		var beforeLast = { x : new Number(points[points.length -2].x), y: new Number(points[points.length -2].y) };
+		if (points.length == 2) {
+			beforeLast = sourceAnchor;
+		}
+		
+		var pathArr = [];
+	    
+	    if (incoming === true) {
+		    pathArr.push("M");
+		    pathArr.push(targetAnchor.x);
+		    pathArr.push(targetAnchor.y);
+
+		    for (var i = points.length-1; i--;) {
+				pathArr.push("L");
+				pathArr.push(points[i].x);
+				pathArr.push(points[i].y);
+        	}
+        }else {
+	        array.forEach(points, function (point, index) {
+		    	if (index == 0) {
+		    		pathArr.push("M");
+		    		pathArr.push(sourceAnchor.x);
+		    		pathArr.push(sourceAnchor.y);
+		    	}else {
+		    		pathArr.push("L");
+		    		pathArr.push(point.x);
+		    		pathArr.push(point.y);
+		    	}
+		    });
+        }
+	    
+	    var color = "#000";
+	    var path = pathArr.join(",");
+	    
+	    if (original) {
+			original.line.attr({path : path});
+
+			var attrs = original.arrow.attrs;
+			delete attrs.path;
+
+			original.arrow.remove();
+			original.arrow = this.arrowHead(beforeLast.x, beforeLast.y, targetAnchor.x, targetAnchor.y, 4);
+			original.arrow.attr(attrs);
+
+			return original;
+		}
+	    
+	    return {
+	    	arrow : this.arrowHead(beforeLast.x, beforeLast.y, targetAnchor.x, targetAnchor.y, 4), 
+	    	line : this.path(path).attr({stroke: color, fill: "none"}),
+	    	source : source,
+	    	target : target,
+	    	sourceAnchor : sourceAnchor,
+	    	targetAnchor : targetAnchor,
+	    	points : points
+	    };
 	};
 	
 	/**
@@ -17,9 +116,20 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 	 * @param obj2
 	 * @returns new connection
 	 */
-	Raphael.fn.connection = function (obj1, obj2, points) {
-	    var bb1 = obj1.getBBox(),
-	        bb2 = obj2.getBBox(),
+	Raphael.fn.connection2 = function (obj1, obj2, points, dynamic) {
+	    var update = false;
+	    var original = undefined;
+	    
+	    if (obj1.from && obj1.to) {
+        	update = true;
+	    	original = obj1;
+        	obj1 = original.from;
+        	obj2 = original.to;
+        	points = original.points;
+    	}
+	    
+	    var bb1 = obj1.baseElem.getBBox(),
+	        bb2 = obj2.baseElem.getBBox(),
 	        p = [{x: bb1.x + bb1.width / 2, y: bb1.y - 1},
 	        {x: bb1.x + bb1.width / 2, y: bb1.y + bb1.height + 1},
 	        {x: bb1.x - 1, y: bb1.y + bb1.height / 2},
@@ -57,8 +167,10 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 	        y3 = [0, 0, 0, 0, y1 + dy, y1 - dy, y4, y4][res[1]].toFixed(3);
 	        
 	    if (points) {
-			x1 = new Number(points[0].x);
-			y1 = new Number(points[0].y);
+			if (!dynamic==true) {
+				x1 = new Number(points[0].x);
+				y1 = new Number(points[0].y);
+			}
 			x4 = new Number(points[points.length-1].x);
 			y4 = new Number(points[points.length-1].y);
 			x3 = new Number(points[points.length-2].x);
@@ -67,18 +179,20 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 	    
 	    var path = undefined;
 	    
-    	path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");
+    	//path = ["M", x1.toFixed(3), y1.toFixed(3), "C", x2, y2, x3, y3, x4.toFixed(3), y4.toFixed(3)].join(",");
 
 	    if (points) {
 	    	pathArr = [];
 	    	array.forEach(points, function (point, index) {
 	    		if (index == 0) {
 	    			pathArr.push("M");
+	    			pathArr.push(x1);
+	    			pathArr.push(y1);
 	    		}else {
 	    			pathArr.push("L");
+	    			pathArr.push(point.x);
+	    			pathArr.push(point.y);
 	    		}
-	    		pathArr.push(point.x);
-	    		pathArr.push(point.y);
 	    	});
 	    	path = pathArr.join(",");
 	    }
@@ -102,18 +216,26 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 	    				"Z";
 	    				
 		if (points) {
-			var arrowPath = this.arrowHead(x3,y3,x4,y4, 6);
+			var arrowPath = this.arrowHead(x3,y3,x4,y4, 4);
 		}
 		else{
 			var arrowPath = this.path(arrowDef).attr({stroke: color, fill: "black"});
-		}
-	    
-        return {
+		} 
+		
+		if (update == true) {
+			original.line.attr({path : path});
+			original.arrow.attr({path : arrowPath});
+		}else{
+			return {
             line: this.path(path).attr({stroke: color, fill: "none"}),
             arrow: arrowPath,
             from: obj1,
-            to: obj2
+            to: obj2,
+            points: points,
+            sourceAnchor : {x : x1, y: y1}
         };
+		}
+
 	};
 	
 	var bpmn = {};
@@ -168,12 +290,41 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 			}
 		};
 		
-		module.renderFlow = function (source, target, waypoints, flowType, flow) {
-			var connection = paper.connection(source, target, waypoints);
+		module.fix = function() {
+			paper.safari();
+		};
+		
+		module.connection = function(connection, dx, dy, incoming) {
+			var con = paper.connection(connection, dx, dy, incoming);
+			module.fix();
+			return con;
+		};
+		
+		module.renderFlow = function (id, source, target, waypoints, flowType, flow, dynamic) {
+			var set = paper.set();
+			
+			var connection = paper.connection(source, target, waypoints, dynamic);
+			connection.id = id;
+			
 			if( flowType == "message" ) {
 				connection.line.attr({"stroke-dasharray" : "--"});
-				connection.arrow.attr({fill:"white", "stroke-width": 1});
+				connection.arrow.attr({fill: "white", "stroke-width": 1});
+				connection.arrow.toFront();
+				connection.sourceAnchor.set.push(paper.circle(connection.sourceAnchor.x, connection.sourceAnchor.y, 5).attr({ fill: 'white' }));
 			}
+			
+			if (source) {
+				source.outgoing.push(connection);
+			}
+			
+			if (target) {
+				target.incoming.push(connection);
+			}
+			
+			set.push(connection.arrow);
+			set.push(connection.line);
+			
+			return {"set" : set, handle : set, baseElem : connection.line, extSet : paper.set() };
 		};
 		
 		module.renderParticipant = function(props) {
@@ -193,7 +344,7 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 				set.push(text);
 				console.log("participant box", rect.getBBox());
 			}
-			return set;
+			return {"set" : set, handle : set, baseElem : rect, extSet : paper.set()};
 		};
 		
 		module.renderGateway = function(props) {
@@ -224,7 +375,7 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 				typePath.attr(symbol.attrs);
 				set.push(typePath);
 			}
-			return set;
+			return {"set" : set, handle : set, baseElem : rect, extSet : paper.set()};
 		};
 		
 		module.renderTask = function(props) {
@@ -244,6 +395,7 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 				var label = paper.text(props.rect.x, props.rect.y, props.label);
 				label.translate(rect.getBBox().width / 2, rect.getBBox().height / 2);
 				bpmn.wordwrap(label, props.label, props.rect.width);
+				set.push(label);
 			}
 		
 			if (props.type && bpmn.taskSymbols[props.type]) {
@@ -254,7 +406,7 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 			}
 			
 			set.push(rect);
-			return set;
+			return {"set" : set, handle : set, baseElem : rect, extSet : paper.set()};
 		};
 		
 		module.renderEvent = function (props) {
@@ -274,11 +426,12 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 		     var ypos = props.position.y+props.radius;
 		     
 		     var base = paper.circle(xpos, ypos, props.radius).attr(props.attrs);
+		     set.push(base);
 
 			 // label
 			 if (props.label){
 			 	 var label = paper.text(xpos, ypos, props.label);
-			     label.translate(0, label.getBBox().height+5);
+			     label.translate(0, label.getBBox().height+10);
 			     set.push(label);
 			 }
 			 
@@ -304,9 +457,7 @@ define( "bpmn/renderer", ["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "doj
 		     	}
 		     }
 		     
-		     set.push(base);
-		     
-		     return set;
+		     return {"set" : set, handle : set, baseElem : base, extSet : paper.set()};
 		};
 				
 		return module;
