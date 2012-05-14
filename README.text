@@ -11,20 +11,19 @@ Include the js files into your html (bpmn.js depends on rapaheljs and dojo at th
 
 This will render the process as SVG representation into an div with id "diagram" :
 
-```javascript
+:::javascript
+	require(["bpmn", "dojo/domReady!"], function(bpmn) {
+		    bpmn.parse("test/collaboration.bpmn", function() {
+		    	bpmn.highlight(["ServiceTask_1"], {"color" : "red"});
+	    	}, 
+	    	{
+	    		diagramElement: "diagram", 
+	    		clickFn : function (elem) {
+	    			alert(JSON.stringify(elem));
+	    		}
+	    	});
+	});
 
-require(["bpmn", "dojo/domReady!"], function(bpmn) {
-	    bpmn.parse("test/collaboration.bpmn", function() {
-	    	bpmn.highlight(["ServiceTask_1"], {"color" : "red"});
-    	}, 
-    	{
-    		diagramElement: "diagram", 
-    		clickFn : function (elem) {
-    			alert(JSON.stringify(elem));
-    		}
-    	});
-});
-```
 
 Todo
 ====
