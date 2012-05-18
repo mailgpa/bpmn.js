@@ -19,6 +19,8 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		module.width = 0;
 		module.height = 0;
 		module.renderer = renderer;
+		module.paper = paper;
+		
 		module.interactive = false;
 		module.hoverInFn = function () {};
 		module.hoverOutFn = function () {};
@@ -158,8 +160,10 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 				var xpos = new Number(waypoint["@x"]).toFixed(0);
 				var ypos = new Number(waypoint["@y"]).toFixed(0);
 				result.push({x: xpos, y:ypos});
+				
+				checkSize(xpos, ypos);
 			});
-
+			
 			return result;
 		};
 		
@@ -349,10 +353,10 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		
 		function checkSize(width, height) {
 			if (module.width < width) {
-				module.width = width;
+				module.width = new Number(width);
 			}
 			if (module.height < height) {
-				module.height = height;
+				module.height = new Number(height);
 			}
 			paper.setSize(module.width+10, module.height+10);
 		}
@@ -730,8 +734,10 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		
 		module.reset = function () {
 			renderer.clear();
-			paper.remove();
-			paper = undefined;
+			if (paper) {
+				paper.remove();
+				paper = undefined;
+			}
 		};
 		
 		module.redraw = function () {
