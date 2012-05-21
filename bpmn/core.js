@@ -33,8 +33,8 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		
 		function clickFunction (element, type){
 			if  (module.clickFn){
-				return function(){
-					module.clickFn(element, type);
+				return function(evt){
+					module.clickFn(element, type, evt);
 				};
 			}
 			return function () {
