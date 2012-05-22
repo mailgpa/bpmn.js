@@ -136,16 +136,25 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
 				"exclusiveGateway" :  {w: 36, h: 36}
 		};
 		
-		module.init = function () {
+		module.hooks = {};
+		module.toolPadHTML = '<button class="btn connectButton"><span style="height:24px">&#8594;</span></button><button class="btn btn-danger deleteButton">Delete</button>';
+		
+		module.init = function (config) {
+			if (config) {
+				if (config.hooks) {
+					module.hooks = config.hooks;
+				}
+				if (config.toolPadHTML) {
+					module.toolPadHTML = config.toolPadHTML;
+				}
+			}
+			
 			bpmn.interactive = true;
 			bpmn.clickFn = function (elem, type, evt) {
 	    		topic.publish("/bpmn/select", {data : elem, target: elem["@id"], targetType: type, evt:evt});
 		    };
 			
 			dndTarget = new Target("diagramWrapper", { accept: [ "startEvent", "endEvent", "serviceTask", "exclusiveGateway", "userTask" ] });
-			dndTarget.onMouseDown = function() {
-				popup.close(registry.byId("myTooltipDialog"));
-			};
 			
 			dndTarget.onMouseMove = function(e) {
 				var output = domGeom.position(dom.byId("diagramWrapper"));
@@ -159,6 +168,48 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
 			};
 		};
 		
+		module.showToolpad = function(selection) {
+			module.destroyToolpad();
+			
+			var targetElem = bpmn.getShapeElement(selection.target);
+			var bb = targetElem.baseElem.getBBox();
+
+			var padX = new Number(bb.x + bb.width + 10.0).toFixed(0);
+			var padY = new Number(bb.y).toFixed(0);
+			
+			var toolPad = dojo.create("div", {
+					id: "toolPad",
+			        innerHTML: module.toolPadHTML,
+			        style: {position: "absolute", top: padY+"px", left: padX+"px", zIndex: 2000}
+			}, dojo.byId("toolPadContainer"));
+			
+	        on( dojo.query(".deleteButton",dojo.byId("toolPad")), "click", function () {
+	        	dojo.destroy(dojo.byId("toolPad"));
+	        	console.log("delete",selection.data)
+	        	bpmn.deleteElement(0, selection.data, selection.targetType);
+	        	bpmn.redraw();
+	        });
+	
+	        on( dojo.query(".connectButton",dojo.byId("toolPad")), "click", function () {
+	        	connectionSource = selection.data;
+	        	connectionSourceType = selection.targetType;
+	        	connectionToggle = true;
+	        	dojo.destroy(dojo.byId("toolPad"));
+	        });
+		};
+		
+		module.destroyToolpad = function() {
+			dojo.destroy(dojo.byId("toolPad"));
+		};
+		
+		topic.subscribe("/bpmn/drag/start", function(selection) {
+			module.destroyToolpad();
+		});
+		
+		topic.subscribe("/bpmn/drag/up", function(selection) {
+			module.showToolpad(selection);
+		});
+		
 		topic.subscribe("/bpmn/element/add", function(addContext){
 			console.log("add", addContext);
 			var newElement = bpmn.addElement(0, addContext.type);
@@ -167,40 +218,11 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
 			bpmn.redraw();
 		});
 		
-		topic.subscribe("/bpmn/select", function(evt) {
+		topic.subscribe("/bpmn/select", function(selection) {
 			var output = domGeom.position(dom.byId("diagramWrapper"));
 //			var padX = evt.evt.clientX-output.x;
 //			var padY = evt.evt.clientY-output.y;
-			
-			var targetElem = bpmn.getShapeElement(evt.target);
-			var bb = targetElem.baseElem.getBBox();
-
-			var padX = bb.x + bb.width + 10;
-			var padY = bb.y;
-    		
-			dojo.destroy(dojo.byId("toolPad"));
-			
-			var toolPad = dojo.create("div", {
-					id: "toolPad",
-			        innerHTML: '<button class="btn btn-danger deleteButton">Delete</button><button class="btn connectButton">&#8594;</button>',
-			        style: {position: "absolute", top: padY+"px", left: padX+"px", zIndex: 2000}
-			}, dojo.byId("toolPadContainer"));
-    		
-			
-	        on( dojo.query(".deleteButton",dojo.byId("toolPad")), "click", function () {
-	        	dojo.destroy(dojo.byId("toolPad"));
-	        	console.log("delete",evt.data)
-	        	bpmn.deleteElement(0, evt.data, evt.targetType);
-	        	bpmn.redraw();
-	        });
-
-	        on( dojo.query(".connectButton",dojo.byId("toolPad")), "click", function () {
-	        	connectionSource = evt.data;
-	        	connectionSourceType = evt.targetType;
-	        	connectionToggle = true;
-	        	dojo.destroy(dojo.byId("toolPad"));
-	        });
-
+			module.showToolpad(selection);
 		});
 		
 		topic.subscribe("/bpmn/select", function(evt) {
@@ -252,7 +274,7 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
 		    
 		    var gridStore = new ItemFileWriteStore({data: data});
 		    
-		    connect.connect(gridStore, "onSet", function (item, arg,arg2,arg3) {
+		    var setterFunction = function (item) {
 				var parseJson = false;
 				var property = item.property[0];
 				
@@ -262,6 +284,14 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
 				
 				bpmn.setElementValue(evt.target, property, item.value[0], parseJson);
 				bpmn.redraw();
+		    };
+		    
+		    connect.connect(gridStore, "onNew", function (item) {
+		    	setterFunction(item);
+		    });
+		    
+		    connect.connect(gridStore, "onSet", function (item) {
+		    	setterFunction(item);
 		    });
 		    
 		    connect.connect(gridStore, "onDelete", function (item) {
@@ -276,6 +306,7 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
     				data.items.push({id:key, property: key, value: JSON.stringify(evt.data[key]), target: evt.target, type: evt.targetType});
     			}
 	    	}
+		    
 		    /*set up layout*/
 		    var layout = [[
 		      {'name': 'Property', 'field': 'property', 'width': '200px', editable: true},
@@ -326,6 +357,12 @@ function(array, bpmn, lang, on, event, connect, DataGrid, Textarea, ItemFileWrit
 			}else{
 				var grid = registry.byId("grid");
 				grid.setStore(gridStore);
+			}
+			
+			dojo.empty("customEditors");
+			
+			if (module.hooks[evt.targetType]){
+				module.hooks[evt.targetType](evt);	
 			}
 	    	
 	    });

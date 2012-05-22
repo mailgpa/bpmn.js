@@ -1,4 +1,4 @@
-define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/array", "dojo/query", "dojo/domReady!"], function(renderer, utils, dom, xhr, path, array, query) {
+define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/array", "dojo/query", 'dojo/topic', "dojo/domReady!"], function(renderer, utils, dom, xhr, path, array, query, topic) {
 
 	return (function(global) {
 		var module = {};
@@ -66,21 +66,25 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		
 		
 		function deleteDI(bpmnElement, type) {
+			var diTag = "BPMNShape";
+			
 			if (!type) {
-				deleteDI(bpmnElement, "BPMNShape");
-				deleteDI(bpmnElement, "BPMNEdge");
 				return;
 			}
 			
-			if (bpmndi[tag(type, "BPMNDI")] instanceof Array) {
-				array.forEach(bpmndi[tag(type, "BPMNDI")], function(entry, index) {
+			if (type.indexOf("Flow") != -1) {
+				diTag = "BPMNEdge";
+			}
+			
+			if (bpmndi[tag(diTag, "BPMNDI")] instanceof Array) {
+				array.forEach(bpmndi[tag(diTag, "BPMNDI")], function(entry, index) {
 					if (entry && entry["@bpmnElement"] && entry["@bpmnElement"] == bpmnElement) {
 						console.log("get shape DI", entry);
-						bpmndi[tag(type, "BPMNDI")].splice(index,1);
+						bpmndi[tag(diTag, "BPMNDI")].splice(index,1);
 					}
 				});
 			}else {
-				bpmndi[tag(type, "BPMNDI")] = [];
+				bpmndi[tag(diTag, "BPMNDI")] = [];
 			}
 		};
 		
@@ -410,18 +414,20 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			shape.set.mousedown(clickFunction(shape.link, shape.type));
 			shape.baseElem.hover(hoverFunction(module.hoverInFn,shape.link, shape.type), hoverFunction(module.hoverOutFn,shape.link, shape.type));
 			
-			var startPath = function () {
+			var startPath = function (x, y, evt) {
 			    // path coordinates are best kept as relative distances
 			    // so that you can use the built in translate method
 			    this.ox = 0;
 			    this.oy = 0;
+			    
+			    topic.publish("/bpmn/drag/start", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
 			
-			var movePath = function (dx, dy) {
+			var movePath = function (dx, dy, x, y, evt) {
 			    // move is called with dx and dy, which we convert
 			    // into translate values, which are reset at the end
 			    // of the function
-			    var trans_x = dx-this.ox;
+				var trans_x = dx-this.ox;
 			    var trans_y = dy-this.oy;
 			    shape.set.transform("...T"+trans_x+","+trans_y);
 			    if(shape.extSet) {
@@ -452,10 +458,15 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			    
 			    di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
 			    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
-            	
+			    
+			    //topic.publish("/bpmn/drag/move", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
         	
-			shape.handle.drag(movePath, startPath);
+			var up = function (evt) {
+				topic.publish("/bpmn/drag/up", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
+			};
+			
+			shape.handle.drag(movePath, startPath, up);
 		};
 
 		function parseEvent(event, eventType) {
@@ -775,7 +786,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			delete elementMap[element["@id"]];
 			delete highlightMap[element["@id"]];
 
-			deleteDI(element["@id"]);
+			deleteDI(element["@id"], elementType);
 		};
 		
 		module.getShapeElement = function(id) {

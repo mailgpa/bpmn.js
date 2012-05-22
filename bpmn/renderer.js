@@ -101,7 +101,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 	    
 	    return {
 	    	arrow : this.arrowHead(beforeLast.x, beforeLast.y, targetAnchor.x, targetAnchor.y, 4), 
-	    	line : this.path(path).attr({stroke: color, fill: "none"}),
+	    	line : this.path(path).attr({stroke: color, fill: "none", "stroke-width" : 2}),
 	    	source : source,
 	    	target : target,
 	    	sourceAnchor : sourceAnchor,
