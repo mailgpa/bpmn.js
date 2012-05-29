@@ -250,7 +250,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		function parseDefinitions(definitions) {
 			parseNamespaces(definitions);
 			if (!paper) {
-				paper = renderer.init(diagramElement, 100, 100);
+				paper = renderer.init(diagramElement, module.width, module.height);
 			}
 			
 			console.log("parsing definitions:" + definitions["@id"]);
@@ -558,6 +558,10 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			}
 			
 			bpmndi[diTag].push(info);
+			if (bounds) {
+				// FIXME , whats going on here?, when is bounds null?
+				checkSize(bounds.x + bounds.width, bounds.y + bounds.height);
+			}
 		};
 		
 		module.addDiagramInfo = addDiagramInfo;
@@ -816,7 +820,9 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			module.parseXml(
 				'<?xml version="1.0" encoding="UTF-8"?><definitions targetNamespace="http://activiti.org/bpmn" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:activiti="http://activiti.org/bpmn" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" xsi:schemaLocation="http://www.omg.org/spec/BPMN/20100524/MODEL BPMN20.xsd" id="Definitions_1">  <process id="process_1" name="Default Process">    <startEvent id="StartEvent_1" />    <sequenceFlow id="SequenceFlow_1" sourceRef="StartEvent_1" targetRef="EndEvent_1"/>    <endEvent id="EndEvent_1"/>  </process>  <bpmndi:BPMNDiagram id="BPMNDiagram_1" name="Default Process Diagram">    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="process_1">      <bpmndi:BPMNShape id="BPMNShape_1" bpmnElement="StartEvent_1">        <dc:Bounds height="36.0" width="36.0" x="100.0" y="100.0"/>      </bpmndi:BPMNShape>      <bpmndi:BPMNShape id="BPMNShape_2" bpmnElement="EndEvent_1">        <dc:Bounds height="36.0" width="36.0" x="500.0" y="100.0"/>      </bpmndi:BPMNShape>      <bpmndi:BPMNEdge id="BPMNEdge_SequenceFlow_1" bpmnElement="SequenceFlow_1" sourceElement="BPMNShape_1" targetElement="BPMNShape_2">        <di:waypoint xsi:type="dc:Point" x="136.0" y="118.0"/>        <di:waypoint xsi:type="dc:Point" x="500.0" y="118.0"/>      </bpmndi:BPMNEdge>    </bpmndi:BPMNPlane>  </bpmndi:BPMNDiagram></definitions>',
 				function() {
-					paper.setSize(1000,1000);
+					module.width = 1000;
+					module.height = 1000;
+					paper.setSize(module.width, module.height);
 				}
 			);
 		};
