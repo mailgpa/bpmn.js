@@ -1,0 +1,82 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>bpmn.js</title>
+		<link rel="stylesheet" href="style.css" media="screen">
+
+		<!-- load dojo and provide config via data attribute -->
+		<script src="lib/raphael.js" type="text/javascript"></script>
+		<script src="http://ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojo/dojo.js" data-dojo-config="async: true, parseOnLoad: true"></script>
+		<script>
+		require({
+				baseUrl: "./",
+				packages: [
+					{ name: "dojo", location: "//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojo" },
+					{ name: "dojox", location: "//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dojox" },
+					{ name: "dijit", location: "//ajax.googleapis.com/ajax/libs/dojo/1.7.2/dijit" },
+					{ name: "bpmn", location: "bpmn", main: "core" }
+				]
+		});
+		</script>
+		<script>
+			// parser and layout deps
+			require(["bpmn","dijit/layout/BorderContainer", "dijit/layout/TabContainer", "dijit/layout/ContentPane", "dojo/parser", "dojo/domReady!"], function(bpmn) {
+				// Check for the various File API support.
+				if (window.File && window.FileReader && window.FileList && window.Blob) {
+					// Great success! All the File APIs are supported.
+				} else {
+					alert('The File APIs are not fully supported in this browser.');
+					return;
+				}
+				
+				function handleFileSelect(evt) {
+				    evt.stopPropagation();
+				    evt.preventDefault();
+	
+				    var files = evt.dataTransfer.files; // FileList object.
+	
+				    // files is a FileList of File objects. List some properties.
+				    for (var i = 0, f; f = files[i]; i++) {
+					  var reader = new FileReader();
+					  reader.onload = function(e) {
+					  		bpmn.reset();
+							bpmn.parseXml(e.target.result);
+					  };
+				      reader.onerror = function(loadError) {
+						  console.log("error", loadError)
+						  console.log (loadError.getMessage())
+					  };
+					  reader.readAsText(f);
+				    }
+				};
+	
+				function handleDragOver(evt) {
+				    evt.stopPropagation();
+				    evt.preventDefault();
+				};
+				
+				var dropZone = document.getElementById('drop_zone');
+				dropZone.addEventListener('dragover', handleDragOver, false);
+				dropZone.addEventListener('drop', handleFileSelect, false);
+			});
+		
+			require(["bpmn/core", "dojo/domReady!"], function(bpmn) {
+			    bpmn.parse("test/collaboration.bpmn", function() {
+				    bpmn.highlight(["ServiceTask_1"], {"color" : "red"});
+			    }, {
+			    	diagramElement: "diagram", 
+			    	clickFn : function (elem) {
+			    		alert(JSON.stringify(elem));
+			    	}
+			    });
+			});
+		</script>
+	</head>
+	<body>
+		<div id="drop_zone">Drop BPMN 2.0 XML here</div>
+		<div id="wrapper">
+			<div id="diagram"></div>
+		</div>
+	</body>
+</html>
