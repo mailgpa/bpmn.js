@@ -125,7 +125,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		};
 
 
-		function tag(name, schema) {
+		var tag = function tag(name, schema) {
 			if (schema && prefixMap[schema]) {
 				return prefixMap[schema] + ":" + name;
 			} 
@@ -133,7 +133,9 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 				return prefixMap["BPMN"] + ":" + name;
 			}
 			return name;
-		}
+		};
+		
+		module.tag = tag;
 
 		function getBounds(bpmnElement) {
 			var di = getShapeDI(bpmnElement);
