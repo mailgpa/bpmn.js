@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <title>bpmn.js by adrobisch</title>
+    <link rel="stylesheet" href="stylesheets/styles.css">
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script src="javascripts/respond.js"></script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <!--[if lt IE 8]>
+    <link rel="stylesheet" href="stylesheets/ie.css">
+    <![endif]-->
+    <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+
+  </head>
+  <body>
+      <div id="header">
+        <nav>
+          <li class="fork"><a href="https://github.com/adrobisch/bpmn.js">View On GitHub</a></li>
+          <li class="downloads"><a href="https://github.com/adrobisch/bpmn.js/zipball/master">ZIP</a></li>
+          <li class="downloads"><a href="https://github.com/adrobisch/bpmn.js/tarball/master">TAR</a></li>
+          <li class="title">DOWNLOADS</li>
+        </nav>
+      </div><!-- end header -->
+
+    <div class="wrapper">
+
+      <section>
+        <div id="title">
+          <h1>bpmn.js</h1>
+          <p></p>
+          <hr>
+          <span class="credits left">Project maintained by <a href="https://github.com/adrobisch">adrobisch</a></span>
+          <span class="credits right">Hosted on GitHub Pages &mdash; Theme by <a href="http://twitter.com/#!/michigangraham">mattgraham</a></span>
+        </div>
+
+        <p>bpmn.js is a JavaScript library to visualize BPMN 2.0 XML content in the browser. 
+The rendering is done with Raphael JS (<a href="http://raphaeljs.com/">http://raphaeljs.com/</a>).</p>
+
+<p>All files and their content are licensed under the GNU Affero General Public License v3 (<a href="http://www.gnu.org/licenses/agpl-3.0.html">http://www.gnu.org/licenses/agpl-3.0.html</a>),
+if not stated otherwise in the individual files.</p>
+
+<h1>Quickstart</h1>
+
+<p>Include the js files into your html (bpmn.js depends on rapaheljs and dojo at the moment).</p>
+
+<p>This will render the process as SVG representation into an div with id "diagram" :</p>
+
+<div class="highlight">
+<pre>
+    <span class="nx">require</span><span class="p">([</span><span class="s2">"bpmn/core"</span><span class="p">,</span> <span class="s2">"dojo/domReady!"</span><span class="p">],</span> <span class="kd">function</span><span class="p">(</span><span class="nx">bpmn</span><span class="p">)</span> <span class="p">{</span>
+            <span class="nx">bpmn</span><span class="p">.</span><span class="nx">parse</span><span class="p">(</span><span class="s2">"test/collaboration.bpmn"</span><span class="p">,</span> <span class="kd">function</span><span class="p">()</span> <span class="p">{</span>
+                <span class="nx">bpmn</span><span class="p">.</span><span class="nx">highlight</span><span class="p">([</span><span class="s2">"ServiceTask_1"</span><span class="p">],</span> <span class="p">{</span><span class="s2">"color"</span> <span class="o">:</span> <span class="s2">"red"</span><span class="p">});</span>
+            <span class="p">},</span> 
+            <span class="p">{</span>
+                <span class="nx">diagramElement</span><span class="o">:</span> <span class="s2">"diagram"</span><span class="p">,</span> 
+                <span class="nx">clickFn</span> <span class="o">:</span> <span class="kd">function</span> <span class="p">(</span><span class="nx">elem</span><span class="p">)</span> <span class="p">{</span>
+                    <span class="nx">alert</span><span class="p">(</span><span class="nx">JSON</span><span class="p">.</span><span class="nx">stringify</span><span class="p">(</span><span class="nx">elem</span><span class="p">));</span>
+                <span class="p">}</span>
+            <span class="p">});</span>
+    <span class="p">});</span>
+</pre>
+</div>
+
+
+<h1>Todo</h1>
+
+<ul>
+<li>Namespace prefix check on element value change</li>
+<li>Flow element containers children</li>
+<li>Boudnary events and labels should always be on top</li>
+<li>Activity / Loop Markers</li>
+<li>Flow labels</li>
+<li>Movable labels</li>
+<li>Movable connection waypoints</li>
+<li>Missing event definitions</li>
+</ul>
+      </section>
+
+    </div>
+    <!--[if !IE]><script>fixScale(document);</script><!--<![endif]-->
+    
+  </body>
+</html>
