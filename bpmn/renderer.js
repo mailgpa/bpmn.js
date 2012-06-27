@@ -11,7 +11,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 		if (pathOnly) {
 			return pathString;
 		}
-		var arrowPath = this.path(pathString).attr("fill","black").rotate((90+angle),x2,y2);
+		var arrowPath = this.path(pathString).attr("fill","#000").rotate((90+angle),x2,y2);
 		return arrowPath;
 	};
 	
@@ -219,7 +219,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 			var arrowPath = this.arrowHead(x3,y3,x4,y4, 4);
 		}
 		else{
-			var arrowPath = this.path(arrowDef).attr({stroke: color, fill: "black"});
+			var arrowPath = this.path(arrowDef).attr({stroke: color, fill: "#000"});
 		} 
 		
 		if (update == true) {
@@ -308,9 +308,9 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 			
 			if( flowType == "message" ) {
 				connection.line.attr({"stroke-dasharray" : "--"});
-				connection.arrow.attr({fill: "white", "stroke-width": 1});
+				connection.arrow.attr({fill: "#fff", "stroke-width": 1});
 				connection.arrow.toFront();
-				connection.sourceAnchor.set.push(paper.circle(connection.sourceAnchor.x, connection.sourceAnchor.y, 5).attr({ fill: 'white' }));
+				connection.sourceAnchor.set.push(paper.circle(connection.sourceAnchor.x, connection.sourceAnchor.y, 5).attr({ fill: '#fff' }));
 			}
 			
 			if (source) {
@@ -329,7 +329,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 		
 		module.renderParticipant = function(props) {
 			props.attrs =  {
-					stroke: 'black'
+					stroke: '#000'
 			};
 			var set = paper.set();
 			
@@ -349,8 +349,8 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 		
 		module.renderGateway = function(props) {
 			props.attrs = {
-					stroke: 'black',
-					fill: 'white'
+					stroke: '#000',
+					fill: '#fff'
 			};
 			
 			var set = paper.set();
@@ -380,7 +380,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 		
 		module.renderTask = function(props) {
 			props.attrs = {
-					stroke: 'black',
+					stroke: '#000',
 					fill: "90-#000-#ffc:1-#fff"
 			};
 			var set = paper.set();
@@ -389,7 +389,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 			if (bpmn.shapeAttrs[props.type]) {
 				rect.attr(bpmn.shapeAttrs[props.type].attrs);
 			}
-			rect.attr(props.attrs)
+			rect.attr(props.attrs);
 			
 			if (props.label) {
 				var label = paper.text(props.rect.x, props.rect.y, props.label);
@@ -410,7 +410,7 @@ define(["dojo/dom", "dojo/_base/xhr", "dojo/_base/array", "dojo/domReady!"], fun
 		};
 		
 		module.renderEvent = function (props) {
-			props.attrs = { fill: 'white' };
+			props.attrs = { fill: '#fff' };
 			
 			var set = paper.set();
 			
