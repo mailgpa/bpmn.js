@@ -1,4 +1,4 @@
-define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/array", "dojo/query", 'dojo/topic', "dojo/domReady!"], function(renderer, utils, dom, xhr, path, array, query, topic) {
+define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonPath", "dojo/_base/array", "dojo/query", 'dojo/topic', "dojo/domReady!"], function(renderer, utils, dom, xhr, path, array, query, topic) {
 
 	return (function(global) {
 		var module = {};
@@ -20,6 +20,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		module.height = 0;
 		module.renderer = renderer;
 		module.paper = paper;
+		module.elementMap = elementMap;
 		
 		module.interactive = false;
 		module.hoverInFn = function () {};
@@ -59,8 +60,9 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 				} catch (e) {
 					dom = null;
 				}
-			} else
-			alert("cannot parse xml string!");
+			} else {
+				print("cannot parse xml string!");
+			}
 			return dom;
 		};
 		
@@ -152,7 +154,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 				w: Math.round(width)
 			};
 			
-			checkSize(bounds.x + bounds.w, bounds.y + bounds.h);
+			module.checkSize(bounds.x + bounds.w, bounds.y + bounds.h);
 			
 			return bounds;
 		};
@@ -167,7 +169,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 				var ypos = new Number(waypoint["@y"]).toFixed(0);
 				result.push({x: xpos, y:ypos});
 				
-				checkSize(xpos, ypos);
+				module.checkSize(xpos, ypos);
 			});
 			
 			return result;
@@ -213,7 +215,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 				
 				switch (elementName) {
 				case "definitions":
-					parseDefinitions(json[prop]);
+					parseDefinitions(json[prop], prop);
 					break;
 
 				case "callActivity":
@@ -249,8 +251,9 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			}
 		};
 
-		function parseDefinitions(definitions) {
-			parseNamespaces(definitions);
+		function parseDefinitions(definitions, definitionsElement) {
+			parseNamespaces(definitions, definitionsElement);
+			
 			if (!paper) {
 				paper = renderer.init(diagramElement, module.width, module.height);
 			}
@@ -302,7 +305,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			});
 		}
 
-		function parseNamespaces(definitions) {
+		function parseNamespaces(definitions, definitionsElement) {
 			for (var prop in definitions) {
 				if (prop.indexOf("@xmlns:") != 1) {
 					var propPrefix = prop.split(":")[1];
@@ -326,6 +329,12 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 					targetNamespace = definitions[prop];
 				}
 			};
+			
+			if (definitionsElement && definitionsElement.indexOf(":") != -1) {
+				prefixMap["BPMN"] = definitionsElement.split(":")[0];
+			}else{
+				prefixMap["BPMN"] = undefined;
+			}
 		};
 
 		function parseCollaboration(collaboration) {
@@ -356,16 +365,16 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			elementMap[participant["@id"]] = participantElem;
 		}
 		
-		
-		function checkSize(width, height) {
+		module.checkSize = function (width, height) {
 			if (module.width < width) {
 				module.width = new Number(width);
+				paper.setSize(module.width+10, module.height+10);
 			}
 			if (module.height < height) {
 				module.height = new Number(height);
+				paper.setSize(module.width+10, module.height+10);
 			}
-			paper.setSize(module.width+10, module.height+10);
-		}
+		};
 
 		function parseMessageFlows(collaboration) {
 			if (!collaboration[tag("messageFlow")]) {
@@ -456,15 +465,22 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			    	}
             	}
             	
-            	var di = getShapeDI(shape.link["@id"]);
+            	
+			    //var di = getShapeDI(shape.link["@id"]);
+			    //di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
+			    //di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
 			    
-			    di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
-			    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
+			    var shapeBounds = shape.baseElem.getBBox();
+			    
+			    module.checkSize(shapeBounds.x2, shapeBounds.y2);
 			    
 			    //topic.publish("/bpmn/drag/move", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
         	
 			var up = function (evt) {
+				var di = getShapeDI(shape.link["@id"]);
+				di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
+			    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
 				topic.publish("/bpmn/drag/up", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
 			
@@ -562,7 +578,7 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 			bpmndi[diTag].push(info);
 			if (bounds) {
 				// FIXME , whats going on here?, when is bounds null?
-				checkSize(bounds.x + bounds.width, bounds.y + bounds.height);
+				module.checkSize(bounds.x + bounds.width, bounds.y + bounds.height);
 			}
 		};
 		
@@ -832,215 +848,4 @@ define(["bpmn/renderer", "xml/utils", "dojo/dom", "dojo/_base/xhr", "dojox/jsonP
 		global.bpmn = module;
 		return module;
 	})(this);
-});
-
-define( "xml/utils", ["dojo/domReady!"], function() {
-
-	return (function(global) {
-		var module = {};
-		
-		/*	This work is licensed under Creative Commons GNU LGPL License.
-
-			License: http://creativecommons.org/licenses/LGPL/2.1/
-		   Version: 0.9
-			Author:  Stefan Goessner/2006
-			Web:     http://goessner.net/ 
-		*/
-		module.xml2json = function (xml, tab) {
-		   var X = {
-		      toObj: function(xml) {
-		         var o = {};
-		         if (xml.nodeType==1) {   // element node ..
-		            if (xml.attributes.length)   // element with attributes  ..
-		               for (var i=0; i<xml.attributes.length; i++)
-		                  o["@"+xml.attributes[i].nodeName] = (xml.attributes[i].nodeValue||"").toString();
-		            if (xml.firstChild) { // element has child nodes ..
-		               var textChild=0, cdataChild=0, hasElementChild=false;
-		               for (var n=xml.firstChild; n; n=n.nextSibling) {
-		                  if (n.nodeType==1) hasElementChild = true;
-		                  else if (n.nodeType==3 && n.nodeValue.match(/[^ \f\n\r\t\v]/)) textChild++; // non-whitespace text
-		                  else if (n.nodeType==4) cdataChild++; // cdata section node
-		               }
-		               if (hasElementChild) {
-		                  if (textChild < 2 && cdataChild < 2) { // structured element with evtl. a single text or/and cdata node ..
-		                     X.removeWhite(xml);
-		                     for (var n=xml.firstChild; n; n=n.nextSibling) {
-		                        if (n.nodeType == 3)  // text node
-		                           o["#text"] = X.escape(n.nodeValue);
-		                        else if (n.nodeType == 4)  // cdata node
-		                           o["#cdata"] = X.escape(n.nodeValue);
-		                        else if (o[n.nodeName]) {  // multiple occurence of element ..
-		                           if (o[n.nodeName] instanceof Array)
-		                              o[n.nodeName][o[n.nodeName].length] = X.toObj(n);
-		                           else
-		                              o[n.nodeName] = [o[n.nodeName], X.toObj(n)];
-		                        }
-		                        else  // first occurence of element..
-		                           o[n.nodeName] = X.toObj(n);
-		                     }
-		                  }
-		                  else { // mixed content
-		                     if (!xml.attributes.length)
-		                        o = X.escape(X.innerXml(xml));
-		                     else
-		                        o["#text"] = X.escape(X.innerXml(xml));
-		                  }
-		               }
-		               else if (textChild) { // pure text
-		                  if (!xml.attributes.length)
-		                     o = X.escape(X.innerXml(xml));
-		                  else
-		                     o["#text"] = X.escape(X.innerXml(xml));
-		               }
-		               else if (cdataChild) { // cdata
-		                  if (cdataChild > 1)
-		                     o = X.escape(X.innerXml(xml));
-		                  else
-		                     for (var n=xml.firstChild; n; n=n.nextSibling)
-		                        o["#cdata"] = X.escape(n.nodeValue);
-		               }
-		            }
-		            if (!xml.attributes.length && !xml.firstChild) o = null;
-		         }
-		         else if (xml.nodeType==9) { // document.node
-		            o = X.toObj(xml.documentElement);
-		         }
-		         else
-		            alert("unhandled node type: " + xml.nodeType);
-		         return o;
-		      },
-		      toJson: function(o, name, ind) {
-		         var json = name ? ("\""+name+"\"") : "";
-		         if (o instanceof Array) {
-		            for (var i=0,n=o.length; i<n; i++)
-		               o[i] = X.toJson(o[i], "", ind+"\t");
-		            json += (name?":[":"[") + (o.length > 1 ? ("\n"+ind+"\t"+o.join(",\n"+ind+"\t")+"\n"+ind) : o.join("")) + "]";
-		         }
-		         else if (o == null)
-		            json += (name&&":") + "null";
-		         else if (typeof(o) == "object") {
-		            var arr = [];
-		            for (var m in o)
-		               arr[arr.length] = X.toJson(o[m], m, ind+"\t");
-		            json += (name?":{":"{") + (arr.length > 1 ? ("\n"+ind+"\t"+arr.join(",\n"+ind+"\t")+"\n"+ind) : arr.join("")) + "}";
-		         }
-		         else if (typeof(o) == "string")
-		            json += (name&&":") + "\"" + o.toString() + "\"";
-		         else
-		            json += (name&&":") + o.toString();
-		         return json;
-		      },
-		      innerXml: function(node) {
-		         var s = ""
-		         if ("innerHTML" in node)
-		            s = node.innerHTML;
-		         else {
-		            var asXml = function(n) {
-		               var s = "";
-		               if (n.nodeType == 1) {
-		                  s += "<" + n.nodeName;
-		                  for (var i=0; i<n.attributes.length;i++)
-		                     s += " " + n.attributes[i].nodeName + "=\"" + (n.attributes[i].nodeValue||"").toString() + "\"";
-		                  if (n.firstChild) {
-		                     s += ">";
-		                     for (var c=n.firstChild; c; c=c.nextSibling)
-		                        s += asXml(c);
-		                     s += "</"+n.nodeName+">";
-		                  }
-		                  else
-		                     s += "/>";
-		               }
-		               else if (n.nodeType == 3)
-		                  s += n.nodeValue;
-		               else if (n.nodeType == 4)
-		                  s += "<![CDATA[" + n.nodeValue + "]]>";
-		               return s;
-		            };
-		            for (var c=node.firstChild; c; c=c.nextSibling)
-		               s += asXml(c);
-		         }
-		         return s;
-		      },
-		      escape: function(txt) {
-		         return txt.replace(/[\\]/g, "\\\\")
-		                   .replace(/[\"]/g, '\\"')
-		                   .replace(/[\n]/g, '\\n')
-		                   .replace(/[\r]/g, '\\r');
-		      },
-		      removeWhite: function(e) {
-		         e.normalize();
-		         for (var n = e.firstChild; n; ) {
-		            if (n.nodeType == 3) {  // text node
-		               if (!n.nodeValue.match(/[^ \f\n\r\t\v]/)) { // pure whitespace text node
-		                  var nxt = n.nextSibling;
-		                  e.removeChild(n);
-		                  n = nxt;
-		               }
-		               else
-		                  n = n.nextSibling;
-		            }
-		            else if (n.nodeType == 1) {  // element node
-		               X.removeWhite(n);
-		               n = n.nextSibling;
-		            }
-		            else                      // any other node
-		               n = n.nextSibling;
-		         }
-		         return e;
-		      }
-		   };
-		   if (xml.nodeType == 9) // document node
-		      xml = xml.documentElement;
-		   var json = X.toJson(X.toObj(X.removeWhite(xml)), xml.nodeName, "\t");
-		   return "{\n" + tab + (tab ? json.replace(/\t/g, tab) : json.replace(/\t|\n/g, "")) + "\n}";
-		};
-		
-		/*	This work is licensed under Creative Commons GNU LGPL License.
-		
-			License: http://creativecommons.org/licenses/LGPL/2.1/
-		   Version: 0.9
-			Author:  Stefan Goessner/2006
-			Web:     http://goessner.net/ 
-		*/
-		module.json2xml = function(o, tab) {
-		   var toXml = function(v, name, ind) {
-		      var xml = "";
-		      if (v instanceof Array) {
-		         for (var i=0, n=v.length; i<n; i++)
-		            xml += ind + toXml(v[i], name, ind+"\t") + "\n";
-		      }
-		      else if (typeof(v) == "object") {
-		         var hasChild = false;
-		         xml += ind + "<" + name;
-		         for (var m in v) {
-		            if (m.charAt(0) == "@")
-		               xml += " " + m.substr(1) + "=\"" + v[m].toString() + "\"";
-		            else
-		               hasChild = true;
-		         }
-		         xml += hasChild ? ">" : "/>";
-		         if (hasChild) {
-		            for (var m in v) {
-		               if (m == "#text")
-		                  xml += v[m];
-		               else if (m == "#cdata")
-		                  xml += "<![CDATA[" + v[m] + "]]>";
-		               else if (m.charAt(0) != "@")
-		                  xml += toXml(v[m], m, ind+"\t");
-		            }
-		            xml += (xml.charAt(xml.length-1)=="\n"?ind:"") + "</" + name + ">";
-		         }
-		      }
-		      else {
-		         xml += ind + "<" + name + ">" + v.toString() +  "</" + name + ">";
-		      }
-		      return xml;
-		   }, xml="";
-		   for (var m in o)
-		      xml += toXml(o[m], m, "");
-		   return tab ? xml.replace(/\t/g, tab) : xml.replace(/\t|\n/g, "");
-		};
-		
-		return module;
-	})();
 });
