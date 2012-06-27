@@ -154,7 +154,7 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 				w: Math.round(width)
 			};
 			
-			checkSize(bounds.x + bounds.w, bounds.y + bounds.h);
+			module.checkSize(bounds.x + bounds.w, bounds.y + bounds.h);
 			
 			return bounds;
 		};
@@ -169,7 +169,7 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 				var ypos = new Number(waypoint["@y"]).toFixed(0);
 				result.push({x: xpos, y:ypos});
 				
-				checkSize(xpos, ypos);
+				module.checkSize(xpos, ypos);
 			});
 			
 			return result;
@@ -215,7 +215,7 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 				
 				switch (elementName) {
 				case "definitions":
-					parseDefinitions(json[prop]);
+					parseDefinitions(json[prop], prop);
 					break;
 
 				case "callActivity":
@@ -251,8 +251,9 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 			}
 		};
 
-		function parseDefinitions(definitions) {
-			parseNamespaces(definitions);
+		function parseDefinitions(definitions, definitionsElement) {
+			parseNamespaces(definitions, definitionsElement);
+			
 			if (!paper) {
 				paper = renderer.init(diagramElement, module.width, module.height);
 			}
@@ -304,7 +305,7 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 			});
 		}
 
-		function parseNamespaces(definitions) {
+		function parseNamespaces(definitions, definitionsElement) {
 			for (var prop in definitions) {
 				if (prop.indexOf("@xmlns:") != 1) {
 					var propPrefix = prop.split(":")[1];
@@ -328,6 +329,12 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 					targetNamespace = definitions[prop];
 				}
 			};
+			
+			if (definitionsElement && definitionsElement.indexOf(":") != -1) {
+				prefixMap["BPMN"] = definitionsElement.split(":")[0];
+			}else{
+				prefixMap["BPMN"] = undefined;
+			}
 		};
 
 		function parseCollaboration(collaboration) {
@@ -358,16 +365,16 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 			elementMap[participant["@id"]] = participantElem;
 		}
 		
-		
-		function checkSize(width, height) {
+		module.checkSize = function (width, height) {
 			if (module.width < width) {
 				module.width = new Number(width);
+				paper.setSize(module.width+10, module.height+10);
 			}
 			if (module.height < height) {
 				module.height = new Number(height);
+				paper.setSize(module.width+10, module.height+10);
 			}
-			paper.setSize(module.width+10, module.height+10);
-		}
+		};
 
 		function parseMessageFlows(collaboration) {
 			if (!collaboration[tag("messageFlow")]) {
@@ -458,15 +465,22 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 			    	}
             	}
             	
-            	var di = getShapeDI(shape.link["@id"]);
+            	
+			    //var di = getShapeDI(shape.link["@id"]);
+			    //di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
+			    //di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
 			    
-			    di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
-			    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
+			    var shapeBounds = shape.baseElem.getBBox();
+			    
+			    module.checkSize(shapeBounds.x2, shapeBounds.y2);
 			    
 			    //topic.publish("/bpmn/drag/move", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
         	
 			var up = function (evt) {
+				var di = getShapeDI(shape.link["@id"]);
+				di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
+			    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
 				topic.publish("/bpmn/drag/up", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
 			
@@ -564,7 +578,7 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
 			bpmndi[diTag].push(info);
 			if (bounds) {
 				// FIXME , whats going on here?, when is bounds null?
-				checkSize(bounds.x + bounds.width, bounds.y + bounds.height);
+				module.checkSize(bounds.x + bounds.width, bounds.y + bounds.height);
 			}
 		};
 		

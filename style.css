@@ -30,14 +30,6 @@ h1 {
 	font-size:1.5em;
 }
 
-/* Any demo specific styling needed for this tutorial only */
-html, body {
-    height: 100%;
-    margin: 0;
-    overflow: hidden;
-    padding: 0;
-}
-
 #appLayout {
     height: 100%;
 }
