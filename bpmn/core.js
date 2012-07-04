@@ -479,8 +479,10 @@ define(["bpmn/renderer", "bpmn/utils", "dojo/dom", "dojo/_base/xhr", "dojox/json
         	
 			var up = function (evt) {
 				var di = getShapeDI(shape.link["@id"]);
-				di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
-			    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
+				if (di && di[tag("Bounds", "OMGDC")]) {
+					di[tag("Bounds", "OMGDC")]["@x"] = shape.baseElem.getBBox().x;
+				    di[tag("Bounds", "OMGDC")]["@y"] = shape.baseElem.getBBox().y;
+				}
 				topic.publish("/bpmn/drag/up", {data : shape.link, target: shape.link["@id"], targetType: shape.type, evt: evt});
 			};
 			
